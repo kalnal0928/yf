@@ -21,7 +21,9 @@ def analyze_jpy_strength():
     recent_data = hist.sort_index(ascending=True)
 
     print("\n--- USD/JPY 환율 지난 거래일 데이터 ---")
-    print(recent_data[["Open", "Close", "High", "Low"]])
+    # 요약 정보만 출력 (전체 DataFrame 대신)
+    print(f"최근 10거래일 종가: {', '.join([f'{price:.2f}' for price in recent_data['Close'].tolist()])}")
+    print(f"평균 종가: {recent_data['Close'].mean():.2f}")
 
     consecutive_strength_days = 0
     strength_detected = False

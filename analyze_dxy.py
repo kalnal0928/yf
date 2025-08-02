@@ -16,11 +16,13 @@ def analyze_dxy():
         print(f"티커 {ticker_symbol}에 대한 데이터를 가져올 수 없습니다. 티커를 확인하거나 네트워크 연결을 확인하세요.")
         return
 
-    # 최근 5거래일 데이터만 사용
-    recent_5_days = hist.tail(5)
+    # 최근 5거래일 데이터만 사용 (copy()를 사용하여 SettingWithCopyWarning 방지)
+    recent_5_days = hist.tail(5).copy()
 
     print("\n--- 달러 인덱스(DXY) 지난 5거래일 데이터 ---")
-    print(recent_5_days[["Open", "Close", "High", "Low", "Volume"]])
+    # 요약 정보만 출력 (전체 DataFrame 대신)
+    print(f"최근 5거래일 종가: {', '.join([f'{price:.2f}' for price in recent_5_days['Close'].tolist()])}")
+    print(f"평균 종가: {recent_5_days['Close'].mean():.2f}")
 
     if len(recent_5_days) < 5:
         print("\n데이터가 5거래일 미만입니다. 충분한 데이터가 없습니다.")
@@ -47,7 +49,8 @@ def analyze_dxy():
 
     if not sudden_changes.empty:
         print(f"\n[분석 결과] 지난 5거래일 동안 급변동(일일 변동률 {significant_change_threshold:.1f}% 이상)이 감지되었습니다:")
-        print(sudden_changes[["Close", "Daily_Change_Pct"]])
+        for idx, row in sudden_changes.iterrows():
+            print(f"  {idx.strftime('%Y-%m-%d')}: {row['Close']:.2f} ({row['Daily_Change_Pct']:+.2f}%)")
     else:
         print(f"\n[분석 결과] 지난 5거래일 동안 급변동(일일 변동률 {significant_change_threshold:.1f}% 이상)은 감지되지 않았습니다.")
 
