@@ -50,8 +50,5 @@ async function fetchYahooFinanceData(symbol, period = "7d") {
 
 // 모듈 내보내기
 window.DataFetcher = {
-    fetchYahooFinanceData,
-    window.DataFetcher = {
     fetchYahooFinanceData
 };
-}; 
