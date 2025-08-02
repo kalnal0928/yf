@@ -118,8 +118,9 @@
     <div class="container">
         <h1>위험 신호 확인 시스템</h1>
         <div class="demo-mode">
-            <strong>데모 모드</strong><br>
-            CORS 정책으로 인해 실제 데이터 대신 샘플 데이터를 사용합니다.
+            <strong>실시간 데이터 모드</strong><br>
+            Netlify Functions를 통해 Yahoo Finance API에서 실시간 데이터를 가져옵니다.<br>
+            API 호출 실패 시 현실적인 샘플 데이터로 폴백됩니다.
         </div>
         <button onclick="runCheck()">위험 신호 확인 실행</button>
         <div id="loading" class="loading" style="display:none;">확인 중... 잠시만 기다려 주세요.</div>
@@ -155,38 +156,52 @@
             return { timestamps, closes: data };
         }
 
-        // Yahoo Finance API를 사용하여 데이터를 가져오는 함수들 (CORS 프록시 사용)
+        // Yahoo Finance API를 사용하여 데이터를 가져오는 함수들 (Netlify Functions 사용)
         async function fetchYahooFinanceData(symbol, period = "7d") {
             try {
-                // 여러 CORS 프록시 시도
-                const proxies = [
-                    `https://api.allorigins.win/raw?url=`,
-                    `https://cors-anywhere.herokuapp.com/`,
-                    `https://thingproxy.freeboard.io/fetch/`
-                ];
+                // Netlify Functions 사용
+                const functionUrl = `/.netlify/functions/fetch-finance-data?symbol=${encodeURIComponent(symbol)}&period=${period}`;
+                const response = await axios.get(functionUrl, {
+                    timeout: 10000
+                });
                 
-                const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${period}`;
-                
-                for (const proxy of proxies) {
-                    try {
-                        const response = await axios.get(proxy + yahooUrl, {
-                            timeout: 5000
-                        });
-                        if (response.data && response.data.chart && response.data.chart.result) {
-                            return response.data.chart.result[0];
-                        }
-                    } catch (proxyError) {
-                        console.log(`Proxy ${proxy} failed for ${symbol}`);
-                        continue;
-                    }
+                if (response.data && response.data.chart && response.data.chart.result) {
+                    return response.data.chart.result[0];
+                } else {
+                    throw new Error('Invalid data format');
                 }
-                
-                // 모든 프록시가 실패하면 샘플 데이터 사용
-                throw new Error('All proxies failed');
                 
             } catch (error) {
                 console.error(`Error fetching data for ${symbol}:`, error);
-                // 샘플 데이터로 폴백
+                
+                // Netlify Functions가 실패하면 CORS 프록시 시도
+                try {
+                    const proxies = [
+                        `https://api.allorigins.win/raw?url=`,
+                        `https://cors-anywhere.herokuapp.com/`,
+                        `https://thingproxy.freeboard.io/fetch/`
+                    ];
+                    
+                    const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${period}`;
+                    
+                    for (const proxy of proxies) {
+                        try {
+                            const proxyResponse = await axios.get(proxy + yahooUrl, {
+                                timeout: 5000
+                            });
+                            if (proxyResponse.data && proxyResponse.data.chart && proxyResponse.data.chart.result) {
+                                return proxyResponse.data.chart.result[0];
+                            }
+                        } catch (proxyError) {
+                            console.log(`Proxy ${proxy} failed for ${symbol}`);
+                            continue;
+                        }
+                    }
+                } catch (proxyError) {
+                    console.log('All proxies failed');
+                }
+                
+                // 모든 방법이 실패하면 샘플 데이터 사용
                 return generateSampleDataForSymbol(symbol, period);
             }
         }
