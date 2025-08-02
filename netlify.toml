@@ -2,8 +2,3 @@
   command = "echo 'No build command needed for static site + functions'"
   publish = "public"
   functions = "netlify/functions"
-
-[build]
-  command = "echo 'No build command needed for static site + functions'"
-  publish = "public"
-  functions = "netlify/functions"
