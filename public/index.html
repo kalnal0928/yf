@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>글로벌 시장 위험 신호</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>글로벌 시장 위험 신호 분석</h1>
+        <button id="analyzeButton">위험 신호 분석 시작</button>
+        <div id="loading" class="hidden">분석 중... 잠시만 기다려 주세요.</div>
+        <div id="results" class="hidden">
+            <h2>분석 결과:</h2>
+            <div id="totalSignals"></div>
+            <div id="details"></div>
+        </div>
+        <div id="error" class="hidden error-message"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

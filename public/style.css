@@ -1,0 +1,84 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #f4f7f6;
+    color: #333;
+}
+
+.container {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 90%;
+    max-width: 700px;
+}
+
+h1 {
+    color: #2c3e50;
+    margin-bottom: 25px;
+}
+
+button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+#loading {
+    margin-top: 20px;
+    font-style: italic;
+    color: #555;
+}
+
+#results {
+    margin-top: 30px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+#results h2 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+#totalSignals {
+    font-size: 24px;
+    font-weight: bold;
+    color: #e74c3c;
+    margin-bottom: 20px;
+}
+
+#details p {
+    background-color: #ecf0f1;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    text-align: left;
+    white-space: pre-wrap; /* 줄바꿈 유지 */
+    word-wrap: break-word; /* 긴 단어 줄바꿈 */
+}
+
+.hidden {
+    display: none;
+}
+
+.error-message {
+    color: #e74c3c;
+    margin-top: 20px;
+    font-weight: bold;
+}
