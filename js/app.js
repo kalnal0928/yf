@@ -51,7 +51,7 @@ async function runCheck() {
         });
 
         // 차트 생성
-        setTimeout(async () => {
+        setTimeout(() => {
             results.forEach((result, index) => {
                 if (result.chartData && (index === 0 || index === 1 || index === 2)) {
                     const canvasId = `chart-${index}`;
@@ -59,32 +59,6 @@ async function runCheck() {
                     ChartManager.createChart(canvasId, result.chartData, titles[index]);
                 }
             });
-
-            // 엔화(USD/JPY) 환율 데이터 가져오기 및 그래프 그리기
-            try {
-                const jpyData = await DataFetcher.fetchExchangeRateData('FX_DAILY', 'USDJPY');
-                if (jpyData) {
-                    const jpyLabels = jpyData.map(item => item.date);
-                    const jpyValues = jpyData.map(item => item.close);
-
-                    ChartManager.createChart(
-                        document.getElementById('jpyChart').getContext('2d'),
-                        'line',
-                        jpyLabels,
-                        [{
-                            label: 'USD/JPY Exchange Rate',
-                            data: jpyValues,
-                            borderColor: 'rgb(255, 99, 132)',
-                            tension: 0.1,
-                            fill: false
-                        }],
-                        'USD/JPY Exchange Rate (Daily)'
-                    );
-                }
-            } catch (error) {
-                console.error("Error creating JPY chart:", error);
-            }
-
         }, 100);
 
     } catch (error) {
