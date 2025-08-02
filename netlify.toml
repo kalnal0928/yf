@@ -1,0 +1,7 @@
+[build]
+  command = "echo 'No build command needed for static site + functions'"
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  python_version = "3.9"
