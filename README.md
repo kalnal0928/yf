@@ -20,6 +20,16 @@
 - Axios (HTTP 클라이언트)
 - Yahoo Finance API
 
+## 데모 모드
+
+현재 애플리케이션은 **데모 모드**로 실행됩니다. CORS (Cross-Origin Resource Sharing) 정책으로 인해 브라우저에서 Yahoo Finance API에 직접 접근할 수 없어, 실제 데이터 대신 샘플 데이터를 사용합니다.
+
+### 실제 데이터 사용을 위한 대안
+
+1. **백엔드 서버 구축**: Node.js, Python Flask, 또는 PHP로 백엔드 API 서버를 구축하여 Yahoo Finance 데이터를 프록시
+2. **Netlify Functions**: Netlify의 서버리스 함수를 사용하여 CORS 문제 해결
+3. **다른 금융 API 사용**: Alpha Vantage, IEX Cloud 등 CORS를 지원하는 API 사용
+
 ## 배포
 
 이 프로젝트는 Netlify에 배포되어 있습니다.
@@ -61,6 +71,14 @@ python -m http.server 8000
 - 10년 국채: `^TNX`
 - 유럽 STOXX 50: `^STOXX50E`
 - 상해 종합: `000001.SS`
+
+## CORS 문제 해결
+
+현재 CORS 정책으로 인해 브라우저에서 Yahoo Finance API에 직접 접근할 수 없습니다. 이를 해결하기 위해 다음과 같은 방법들을 시도했습니다:
+
+1. **CORS 프록시 사용**: 여러 공개 CORS 프록시 서비스 사용
+2. **샘플 데이터 폴백**: API 호출 실패 시 현실적인 샘플 데이터 생성
+3. **에러 처리**: 네트워크 오류에 대한 적절한 처리
 
 ## 라이선스
 

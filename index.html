@@ -103,11 +103,24 @@
             border-radius: 5px;
             margin: 10px 0;
         }
+        .demo-mode {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>위험 신호 확인 시스템</h1>
+        <div class="demo-mode">
+            <strong>데모 모드</strong><br>
+            CORS 정책으로 인해 실제 데이터 대신 샘플 데이터를 사용합니다.
+        </div>
         <button onclick="runCheck()">위험 신호 확인 실행</button>
         <div id="loading" class="loading" style="display:none;">확인 중... 잠시만 기다려 주세요.</div>
 
@@ -121,14 +134,84 @@
     </div>
 
     <script>
-        // Yahoo Finance API를 사용하여 데이터를 가져오는 함수들
+        // 샘플 데이터 생성 함수
+        function generateSampleData(baseValue, volatility = 0.02, days = 7) {
+            const data = [];
+            const timestamps = [];
+            let currentValue = baseValue;
+            
+            const now = new Date();
+            for (let i = days - 1; i >= 0; i--) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                timestamps.push(Math.floor(date.getTime() / 1000));
+                
+                // 랜덤 변동 생성
+                const change = (Math.random() - 0.5) * volatility * currentValue;
+                currentValue += change;
+                data.push(Math.max(currentValue, 0)); // 음수 방지
+            }
+            
+            return { timestamps, closes: data };
+        }
+
+        // Yahoo Finance API를 사용하여 데이터를 가져오는 함수들 (CORS 프록시 사용)
         async function fetchYahooFinanceData(symbol, period = "7d") {
             try {
-                const response = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${period}`);
-                return response.data.chart.result[0];
+                // 여러 CORS 프록시 시도
+                const proxies = [
+                    `https://api.allorigins.win/raw?url=`,
+                    `https://cors-anywhere.herokuapp.com/`,
+                    `https://thingproxy.freeboard.io/fetch/`
+                ];
+                
+                const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${period}`;
+                
+                for (const proxy of proxies) {
+                    try {
+                        const response = await axios.get(proxy + yahooUrl, {
+                            timeout: 5000
+                        });
+                        if (response.data && response.data.chart && response.data.chart.result) {
+                            return response.data.chart.result[0];
+                        }
+                    } catch (proxyError) {
+                        console.log(`Proxy ${proxy} failed for ${symbol}`);
+                        continue;
+                    }
+                }
+                
+                // 모든 프록시가 실패하면 샘플 데이터 사용
+                throw new Error('All proxies failed');
+                
             } catch (error) {
                 console.error(`Error fetching data for ${symbol}:`, error);
-                return null;
+                // 샘플 데이터로 폴백
+                return generateSampleDataForSymbol(symbol, period);
+            }
+        }
+
+        // 심볼별 샘플 데이터 생성
+        function generateSampleDataForSymbol(symbol, period) {
+            const days = period === "5d" ? 5 : period === "10d" ? 10 : 7;
+            
+            switch(symbol) {
+                case "^VIX":
+                    return generateSampleData(18.5, 0.15, days);
+                case "^IXIC":
+                    return generateSampleData(21000, 0.03, days);
+                case "DX-Y.NYB":
+                    return generateSampleData(98.5, 0.01, days);
+                case "JPY=X":
+                    return generateSampleData(148.0, 0.02, days);
+                case "^TNX":
+                    return generateSampleData(4.2, 0.05, days);
+                case "^STOXX50E":
+                    return generateSampleData(5200, 0.025, days);
+                case "000001.SS":
+                    return generateSampleData(3550, 0.02, days);
+                default:
+                    return generateSampleData(100, 0.02, days);
             }
         }
 
@@ -137,13 +220,13 @@
             const data = await fetchYahooFinanceData("^VIX");
             if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
 
-            const timestamps = data.timestamp;
-            const closes = data.indicators.quote[0].close;
+            const timestamps = data.timestamps;
+            const closes = data.closes;
             
             let output = "\n--- VIX 지수 추적 ---\n";
             output += "최근 7일간 VIX 종가:\n";
             
-            for (let i = Math.max(0, timestamps.length - 7); i < timestamps.length; i++) {
+            for (let i = 0; i < timestamps.length; i++) {
                 const date = new Date(timestamps[i] * 1000);
                 const close = closes[i];
                 output += `  ${date.toISOString().split('T')[0]}: ${close?.toFixed(2) || 'N/A'}\n`;
@@ -184,13 +267,13 @@
             const data = await fetchYahooFinanceData("^IXIC");
             if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
 
-            const timestamps = data.timestamp;
-            const closes = data.indicators.quote[0].close;
+            const timestamps = data.timestamps;
+            const closes = data.closes;
             
             let output = "\n--- 나스닥 연속 하락 추적 ---\n";
             output += "최근 7일간 나스닥 종가:\n";
             
-            for (let i = Math.max(0, timestamps.length - 7); i < timestamps.length; i++) {
+            for (let i = 0; i < timestamps.length; i++) {
                 const date = new Date(timestamps[i] * 1000);
                 const close = closes[i];
                 output += `  ${date.toISOString().split('T')[0]}: ${close?.toFixed(2) || 'N/A'}\n`;
@@ -203,7 +286,7 @@
             let consecutiveDropDays = 0;
             const dropThreshold = -3.0;
 
-            for (let i = timestamps.length - 3; i < timestamps.length - 1; i++) {
+            for (let i = Math.max(1, timestamps.length - 3); i < timestamps.length; i++) {
                 if (closes[i] < closes[i-1]) {
                     const dailyChangePct = ((closes[i] - closes[i-1]) / closes[i-1]) * 100;
                     if (dailyChangePct <= dropThreshold) {
@@ -232,8 +315,8 @@
             const data = await fetchYahooFinanceData("DX-Y.NYB", "5d");
             if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
 
-            const timestamps = data.timestamp;
-            const closes = data.indicators.quote[0].close;
+            const timestamps = data.timestamps;
+            const closes = data.closes;
             
             let output = "\n--- 달러 인덱스(DXY) 지난 5거래일 데이터 ---\n";
             output += `최근 5거래일 종가: ${closes.slice(-5).map(price => price?.toFixed(2) || 'N/A').join(', ')}\n`;
@@ -261,8 +344,8 @@
             const data = await fetchYahooFinanceData("JPY=X", "10d");
             if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
 
-            const timestamps = data.timestamp;
-            const closes = data.indicators.quote[0].close;
+            const timestamps = data.timestamps;
+            const closes = data.closes;
             
             let output = "\n--- USD/JPY 환율 지난 거래일 데이터 ---\n";
             output += `최근 10거래일 종가: ${closes.slice(-10).map(price => price?.toFixed(2) || 'N/A').join(', ')}\n`;
@@ -292,8 +375,8 @@
             const data = await fetchYahooFinanceData("^TNX");
             if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
 
-            const timestamps = data.timestamp;
-            const closes = data.indicators.quote[0].close;
+            const timestamps = data.timestamps;
+            const closes = data.closes;
             
             const currentRate = closes[closes.length - 1];
             const previousRate = closes[closes.length - 2];
@@ -333,7 +416,7 @@
                 const data = await fetchYahooFinanceData(market.symbol, "2d");
                 if (!data) continue;
 
-                const closes = data.indicators.quote[0].close;
+                const closes = data.closes;
                 const currentClose = closes[closes.length - 1];
                 const previousClose = closes[closes.length - 2];
 
