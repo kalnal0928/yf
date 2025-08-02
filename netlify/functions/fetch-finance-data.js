@@ -18,7 +18,60 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const { symbol, period = '7d' } = event.queryStringParameters || {};
+            const { function: timeSeriesFunction, symbol: currencyPair } = event.queryStringParameters;
+        const API_KEY = process.env.FINANCE_API_KEY; // Ensure this is set in Netlify environment variables
+
+        if (!timeSeriesFunction || !currencyPair) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: "Function and symbol parameters are required." })
+            };
+        }
+
+        if (!API_KEY) {
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: "API Key not configured." })
+            };
+        }
+
+        try {
+            const url = `https://www.alphavantage.co/query?function=${timeSeriesFunction}&from_symbol=${currencyPair.substring(0, 3)}&to_symbol=${currencyPair.substring(3, 6)}&outputsize=full&apikey=${API_KEY}`;
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data["Error Message"]) {
+                return {
+                    statusCode: 400,
+                    body: JSON.stringify({ error: data["Error Message"] })
+                };
+            }
+
+            // Extract daily adjusted close prices for FX_DAILY
+            const timeSeries = data["Time Series FX (Daily)"];
+            if (!timeSeries) {
+                return {
+                    statusCode: 404,
+                    body: JSON.stringify({ error: "No time series data found." })
+                };
+            }
+
+            const formattedData = Object.keys(timeSeries).map(date => ({
+                date: date,
+                close: parseFloat(timeSeries[date]["4. close"])
+            })).sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort by date ascending
+
+            return {
+                statusCode: 200,
+                body: JSON.stringify(formattedData)
+            };
+        } catch (error) {
+            console.error("Error fetching finance data:", error);
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: "Failed to fetch finance data." })
+            };
+        }
     
     if (!symbol) {
       return {

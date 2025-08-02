@@ -6,36 +6,14 @@
     <title>위험 신호 확인 시스템</title>
     
     <!-- 외부 라이브러리 -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    
-    <!-- 스타일시트 -->
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="container">
-        <h1>위험 신호 확인 시스템</h1>
-        <div class="demo-mode">
-            <strong>실시간 데이터 모드</strong><br>
-            Netlify Functions를 통해 Yahoo Finance API에서 실시간 데이터를 가져옵니다.<br>
-            API 호출 실패 시 명확한 에러 메시지를 표시합니다.
-        </div>
-        <button onclick="runCheck()">위험 신호 확인 실행</button>
-        <div id="loading" class="loading" style="display:none;">확인 중... 잠시만 기다려 주세요.</div>
+            <section id="jpy-chart-section" class="chart-section">
+            <h2>USD/JPY Exchange Rate (Daily)</h2>
+            <canvas id="jpyChart"></canvas>
+        </section>
 
-        <div id="results">
-            <h2 class="section-title" id="summary-title" style="display:none;">최종 요약</h2>
-            <div id="summary" class="summary-section"></div>
-
-            <h2 class="section-title" id="details-title" style="display:none;">스크립트별 상세 결과</h2>
-            <div id="details"></div>
-        </div>
-    </div>
-
-    <!-- 모듈화된 JavaScript 파일들 -->
-    <script src="js/data-fetcher.js"></script>
-    <script src="js/analyzers.js"></script>
-    <script src="js/chart-manager.js"></script>
-    <script src="js/app.js"></script>
-</body>
-</html> 
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="js/data-fetcher.js"></script>
+        <script src="js/chart-manager.js"></script>
+        <script src="js/analyzers.js"></script>
+        <script src="js/app.js"></script> 

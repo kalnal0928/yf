@@ -50,5 +50,21 @@ async function fetchYahooFinanceData(symbol, period = "7d") {
 
 // 모듈 내보내기
 window.DataFetcher = {
-    fetchYahooFinanceData
+    fetchYahooFinanceData,
+    fetchExchangeRateData: async function(timeSeriesFunction, currencyPair) {
+        try {
+            const response = await axios.get(`/.netlify/functions/fetch-finance-data?function=${timeSeriesFunction}&symbol=${currencyPair}`, {
+                timeout: 10000
+            });
+            
+            if (response.data) {
+                return response.data;
+            } else {
+                throw new Error('Invalid exchange rate data format');
+            }
+        } catch (error) {
+            console.error(`Error fetching exchange rate data for ${currencyPair}:`, error);
+            throw error;
+        }
+    }
 }; 
