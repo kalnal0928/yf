@@ -27,7 +27,7 @@ def run_and_check_signal(script_path, signal_keywords):
         return 0
 
 def main():
-    base_dir = "I:\\내 드라이브\\git_hub_homePage\\yf"
+    base_dir = "I:\내 드라이브\git_hub_homePage\yf\netlify\functions"
     
     # 각 스크립트와 해당 스크립트에서 감지할 위험 신호 키워드 정의
     scripts = {
