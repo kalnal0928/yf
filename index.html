@@ -217,7 +217,7 @@
 
         // 심볼별 샘플 데이터 생성
         function generateSampleDataForSymbol(symbol, period) {
-            const days = period === "5d" ? 5 : period === "10d" ? 10 : 7;
+            const days = period === "5d" ? 5 : period === "10d" ? 10 : period === "1mo" ? 30 : 7;
             
             switch(symbol) {
                 case "^VIX":
@@ -346,7 +346,7 @@
 
         // DXY 분석
         async function analyzeDXY() {
-            const data = await fetchYahooFinanceData("DX-Y.NYB", "5d");
+            const data = await fetchYahooFinanceData("DX-Y.NYB", "1mo");
             if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
 
             // 데이터 구조 안전하게 처리
@@ -357,25 +357,65 @@
                 return { signals: 0, output: "유효한 데이터가 없습니다." };
             }
             
-            let output = "\n--- 달러 인덱스(DXY) 지난 5거래일 데이터 ---\n";
+            let output = "\n--- 달러 인덱스(DXY) 1개월 추적 ---\n";
+            
+            // 최근 5일 데이터 분석
             const recent5Days = closes.slice(-5).filter(price => price !== null && price !== undefined);
             output += `최근 5거래일 종가: ${recent5Days.map(price => price?.toFixed(2) || 'N/A').join(', ')}\n`;
-            output += `평균 종가: ${recent5Days.length > 0 ? (recent5Days.reduce((sum, price) => sum + (price || 0), 0) / recent5Days.length).toFixed(2) : 'N/A'}\n`;
+            output += `5일 평균 종가: ${recent5Days.length > 0 ? (recent5Days.reduce((sum, price) => sum + (price || 0), 0) / recent5Days.length).toFixed(2) : 'N/A'}\n`;
+            
+            // 전체 1개월 데이터 분석
+            const allValidData = closes.filter(price => price !== null && price !== undefined);
+            output += `1개월 평균 종가: ${allValidData.length > 0 ? (allValidData.reduce((sum, price) => sum + (price || 0), 0) / allValidData.length).toFixed(2) : 'N/A'}\n`;
+            output += `1개월 최고가: ${allValidData.length > 0 ? Math.max(...allValidData).toFixed(2) : 'N/A'}\n`;
+            output += `1개월 최저가: ${allValidData.length > 0 ? Math.min(...allValidData).toFixed(2) : 'N/A'}\n`;
 
             let signals = 0;
             
-            // 급변동 분석
+            // 1개월 변동률 계산
+            if (allValidData.length >= 2) {
+                const firstPrice = allValidData[0];
+                const lastPrice = allValidData[allValidData.length - 1];
+                const monthlyChange = ((lastPrice - firstPrice) / firstPrice) * 100;
+                output += `1개월 변동률: ${monthlyChange.toFixed(2)}%\n`;
+                
+                // 1개월 변동이 5% 이상이면 신호
+                if (Math.abs(monthlyChange) >= 5) {
+                    output += `\n[경고] 달러 인덱스가 1개월간 ${Math.abs(monthlyChange).toFixed(2)}% ${monthlyChange > 0 ? '상승' : '하락'}했습니다!\n`;
+                    signals++;
+                }
+            }
+            
+            // 최근 5일 급변동 분석
             for (let i = 1; i < recent5Days.length; i++) {
                 if (recent5Days[i] && recent5Days[i-1]) {
                     const dailyChangePct = Math.abs((recent5Days[i] - recent5Days[i-1]) / recent5Days[i-1]) * 100;
                     if (dailyChangePct >= 0.5) {
-                        output += `\n[분석 결과] 급변동 감지: ${dailyChangePct.toFixed(2)}% 변동\n`;
+                        output += `\n[분석 결과] 최근 5일간 급변동 감지: ${dailyChangePct.toFixed(2)}% 변동\n`;
                         signals++;
                     }
                 }
             }
 
-            return { signals, output };
+            // 1개월 추세 분석
+            if (allValidData.length >= 10) {
+                const firstHalf = allValidData.slice(0, Math.floor(allValidData.length / 2));
+                const secondHalf = allValidData.slice(Math.floor(allValidData.length / 2));
+                
+                const firstHalfAvg = firstHalf.reduce((sum, price) => sum + price, 0) / firstHalf.length;
+                const secondHalfAvg = secondHalf.reduce((sum, price) => sum + price, 0) / secondHalf.length;
+                
+                const trendChange = ((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100;
+                output += `\n1개월 추세 분석: ${trendChange > 0 ? '상승' : '하락'} 추세 (${trendChange.toFixed(2)}%)\n`;
+                
+                // 추세가 3% 이상이면 신호
+                if (Math.abs(trendChange) >= 3) {
+                    output += `[분석 결과] 명확한 ${trendChange > 0 ? '상승' : '하락'} 추세가 감지되었습니다.\n`;
+                    signals++;
+                }
+            }
+
+            return { signals, output, chartData: { timestamps, closes } };
         }
 
         // JPY 분석
@@ -518,6 +558,21 @@
             const validData = data.closes.filter(value => value !== null && value !== undefined);
             const validLabels = labels.slice(0, validData.length);
             
+            // 차트별 색상 설정
+            let chartColor = 'rgb(75, 192, 192)';
+            let backgroundColor = 'rgba(75, 192, 192, 0.2)';
+            
+            if (title.includes('DXY') || title.includes('Dollar')) {
+                chartColor = 'rgb(255, 99, 132)';
+                backgroundColor = 'rgba(255, 99, 132, 0.2)';
+            } else if (title.includes('VIX')) {
+                chartColor = 'rgb(255, 159, 64)';
+                backgroundColor = 'rgba(255, 159, 64, 0.2)';
+            } else if (title.includes('Nasdaq')) {
+                chartColor = 'rgb(54, 162, 235)';
+                backgroundColor = 'rgba(54, 162, 235, 0.2)';
+            }
+            
             return new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -525,18 +580,53 @@
                     datasets: [{
                         label: title,
                         data: validData,
-                        borderColor: 'rgb(75, 192, 192)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        tension: 0.1
+                        borderColor: chartColor,
+                        backgroundColor: backgroundColor,
+                        borderWidth: 2,
+                        tension: 0.1,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: title,
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
                     scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '날짜'
+                            }
+                        },
                         y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: title.includes('VIX') ? 'VIX 지수' : 
+                                      title.includes('Nasdaq') ? '지수' : 
+                                      title.includes('DXY') ? '달러 인덱스' : '가격'
+                            },
                             beginAtZero: false
                         }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
                     }
                 }
             });
@@ -580,7 +670,7 @@
                     scriptDetailDiv.className = 'script-detail-section';
                     
                     let chartHtml = '';
-                    if (result.chartData && (index === 0 || index === 1)) {
+                    if (result.chartData && (index === 0 || index === 1 || index === 2)) {
                         const canvasId = `chart-${index}`;
                         chartHtml = `<div class="chart-container"><canvas id="${canvasId}"></canvas></div>`;
                     }
@@ -597,9 +687,9 @@
                 // 차트 생성
                 setTimeout(() => {
                     results.forEach((result, index) => {
-                        if (result.chartData && (index === 0 || index === 1)) {
+                        if (result.chartData && (index === 0 || index === 1 || index === 2)) {
                             const canvasId = `chart-${index}`;
-                            const titles = ['VIX Index', 'Nasdaq Composite'];
+                            const titles = ['VIX Index', 'Nasdaq Composite', 'Dollar Index (DXY)'];
                             createChart(canvasId, result.chartData, titles[index]);
                         }
                     });
