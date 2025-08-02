@@ -4,4 +4,8 @@
   functions = "netlify/functions"
 
 [functions]
-  python_version = "3.9"
+
+  [functions.python_version]
+  # Netlify 빌드 오류 메시지에 따라 python_version을 객체(테이블)로 정의합니다.
+  # 이 안에 실제 버전을 지정하는 방법은 명확하지 않으므로, 일단 빈 테이블로 둡니다.
+  # Netlify가 기본 파이썬 버전을 사용하거나 다른 방식으로 감지할 수 있습니다.
