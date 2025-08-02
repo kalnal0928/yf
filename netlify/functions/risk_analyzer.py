@@ -3,7 +3,7 @@ import subprocess
 import os
 
 def handler(event, context):
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     
     # 각 스크립트와 해당 스크립트에서 감지할 위험 신호 키워드 정의
     # 이 부분은 check_all_risks.py의 로직을 가져왔습니다.
