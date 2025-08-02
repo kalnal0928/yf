@@ -29,6 +29,9 @@ function createChart(canvasId, data, title) {
     } else if (title.includes('Nasdaq')) {
         chartColor = 'rgb(54, 162, 235)';
         backgroundColor = 'rgba(54, 162, 235, 0.2)';
+    } else if (title.includes('Japanese Yen')) { // Added for Japanese Yen
+        chartColor = 'rgb(153, 102, 255)';
+        backgroundColor = 'rgba(153, 102, 255, 0.2)';
     }
     
     return new Chart(ctx, {
@@ -75,9 +78,9 @@ function createChart(canvasId, data, title) {
                     display: true,
                     title: {
                         display: true,
-                        text: title.includes('VIX') ? 'VIX 지수' : 
-                              title.includes('Nasdaq') ? '지수' : 
-                              title.includes('DXY') ? '달러 인덱스' : '가격'
+                        text:                               title.includes('Nasdaq') ? '지수' :
+                              title.includes('DXY') ? '달러 인덱스' :
+                              title.includes('Japanese Yen') ? '엔화' : '가격'
                     },
                     beginAtZero: false
                 }

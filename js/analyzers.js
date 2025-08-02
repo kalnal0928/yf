@@ -224,7 +224,7 @@ async function analyzeJPY() {
             }
         }
 
-        return { signals, output };
+        return { signals, output, chartData: { timestamps, closes } };
     } catch (error) {
         return { signals: 0, output: `JPY 데이터 가져오기 실패: ${error.message}` };
     }
