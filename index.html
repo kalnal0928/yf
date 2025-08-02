@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>위험 신호 확인 시스템</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0056b3;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .section-title {
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: #0056b3;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .summary-section {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #e0f7fa;
+            border: 1px solid #b2ebf2;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+        }
+        .script-detail-section {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            border: 1px solid #eee;
+        }
+        .script-detail-section h3 {
+            margin-top: 0;
+            color: #007bff;
+        }
+        .script-detail-section pre {
+            background-color: #e9e9e9;
+            padding: 10px;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+        .loading {
+            text-align: center;
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+        .signal-count {
+            font-weight: bold;
+            color: #d32f2f;
+            font-size: 1.1em;
+        }
+        .chart-container {
+            margin: 10px 0;
+            position: relative;
+            height: 300px;
+        }
+        .error-message {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>위험 신호 확인 시스템</h1>
+        <button onclick="runCheck()">위험 신호 확인 실행</button>
+        <div id="loading" class="loading" style="display:none;">확인 중... 잠시만 기다려 주세요.</div>
+
+        <div id="results">
+            <h2 class="section-title" id="summary-title" style="display:none;">최종 요약</h2>
+            <div id="summary" class="summary-section"></div>
+
+            <h2 class="section-title" id="details-title" style="display:none;">스크립트별 상세 결과</h2>
+            <div id="details"></div>
+        </div>
+    </div>
+
+    <script>
+        // Yahoo Finance API를 사용하여 데이터를 가져오는 함수들
+        async function fetchYahooFinanceData(symbol, period = "7d") {
+            try {
+                const response = await axios.get(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=${period}`);
+                return response.data.chart.result[0];
+            } catch (error) {
+                console.error(`Error fetching data for ${symbol}:`, error);
+                return null;
+            }
+        }
+
+        // VIX 지수 분석
+        async function analyzeVIX() {
+            const data = await fetchYahooFinanceData("^VIX");
+            if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
+
+            const timestamps = data.timestamp;
+            const closes = data.indicators.quote[0].close;
+            
+            let output = "\n--- VIX 지수 추적 ---\n";
+            output += "최근 7일간 VIX 종가:\n";
+            
+            for (let i = Math.max(0, timestamps.length - 7); i < timestamps.length; i++) {
+                const date = new Date(timestamps[i] * 1000);
+                const close = closes[i];
+                output += `  ${date.toISOString().split('T')[0]}: ${close?.toFixed(2) || 'N/A'}\n`;
+            }
+
+            const currentVIX = closes[closes.length - 1];
+            const previousVIX = closes[closes.length - 2];
+            
+            output += `전일 VIX 종가: ${previousVIX?.toFixed(2) || 'N/A'}\n`;
+            output += `현재 VIX 종가: ${currentVIX?.toFixed(2) || 'N/A'}\n`;
+
+            let signals = 0;
+            
+            if (currentVIX > 25) {
+                output += `\n[경고] VIX 지수가 25를 돌파했습니다! 현재 VIX: ${currentVIX.toFixed(2)}\n`;
+                signals++;
+            } else {
+                output += `\n[알림] VIX 지수는 25 미만입니다. 현재 VIX: ${currentVIX.toFixed(2)}\n`;
+            }
+
+            if (previousVIX > 0) {
+                const dailyChangePct = ((currentVIX - previousVIX) / previousVIX) * 100;
+                output += `일일 변동률: ${dailyChangePct.toFixed(2)}%\n`;
+
+                if (dailyChangePct >= 20) {
+                    output += `\n[경고] VIX 지수가 하루 만에 20% 이상 급등했습니다! (${dailyChangePct.toFixed(2)}% 상승)\n`;
+                    signals++;
+                } else {
+                    output += `\n[알림] VIX 지수의 일일 변동률은 20% 미만입니다.\n`;
+                }
+            }
+
+            return { signals, output, chartData: { timestamps, closes } };
+        }
+
+        // Nasdaq 분석
+        async function analyzeNasdaq() {
+            const data = await fetchYahooFinanceData("^IXIC");
+            if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
+
+            const timestamps = data.timestamp;
+            const closes = data.indicators.quote[0].close;
+            
+            let output = "\n--- 나스닥 연속 하락 추적 ---\n";
+            output += "최근 7일간 나스닥 종가:\n";
+            
+            for (let i = Math.max(0, timestamps.length - 7); i < timestamps.length; i++) {
+                const date = new Date(timestamps[i] * 1000);
+                const close = closes[i];
+                output += `  ${date.toISOString().split('T')[0]}: ${close?.toFixed(2) || 'N/A'}\n`;
+            }
+
+            const currentNasdaq = closes[closes.length - 1];
+            output += `현재 나스닥 종가: ${currentNasdaq?.toFixed(2) || 'N/A'}\n`;
+
+            // 최근 3일간의 하락 여부 확인
+            let consecutiveDropDays = 0;
+            const dropThreshold = -3.0;
+
+            for (let i = timestamps.length - 3; i < timestamps.length - 1; i++) {
+                if (closes[i] < closes[i-1]) {
+                    const dailyChangePct = ((closes[i] - closes[i-1]) / closes[i-1]) * 100;
+                    if (dailyChangePct <= dropThreshold) {
+                        consecutiveDropDays++;
+                    } else {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            let signals = 0;
+            if (consecutiveDropDays >= 3) {
+                output += `\n[경고] 나스닥이 3% 이상 ${consecutiveDropDays}일 연속 하락했습니다!\n`;
+                signals++;
+            } else {
+                output += `\n[알림] 나스닥이 3% 이상 3일 연속 하락하는 위험 신호는 감지되지 않았습니다. (연속 하락일: ${consecutiveDropDays}일)\n`;
+            }
+
+            return { signals, output, chartData: { timestamps, closes } };
+        }
+
+        // DXY 분석
+        async function analyzeDXY() {
+            const data = await fetchYahooFinanceData("DX-Y.NYB", "5d");
+            if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
+
+            const timestamps = data.timestamp;
+            const closes = data.indicators.quote[0].close;
+            
+            let output = "\n--- 달러 인덱스(DXY) 지난 5거래일 데이터 ---\n";
+            output += `최근 5거래일 종가: ${closes.slice(-5).map(price => price?.toFixed(2) || 'N/A').join(', ')}\n`;
+            output += `평균 종가: ${(closes.slice(-5).reduce((sum, price) => sum + (price || 0), 0) / 5).toFixed(2)}\n`;
+
+            let signals = 0;
+            
+            // 급변동 분석
+            const recent5Days = closes.slice(-5);
+            for (let i = 1; i < recent5Days.length; i++) {
+                if (recent5Days[i] && recent5Days[i-1]) {
+                    const dailyChangePct = Math.abs((recent5Days[i] - recent5Days[i-1]) / recent5Days[i-1]) * 100;
+                    if (dailyChangePct >= 0.5) {
+                        output += `\n[분석 결과] 급변동 감지: ${dailyChangePct.toFixed(2)}% 변동\n`;
+                        signals++;
+                    }
+                }
+            }
+
+            return { signals, output };
+        }
+
+        // JPY 분석
+        async function analyzeJPY() {
+            const data = await fetchYahooFinanceData("JPY=X", "10d");
+            if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
+
+            const timestamps = data.timestamp;
+            const closes = data.indicators.quote[0].close;
+            
+            let output = "\n--- USD/JPY 환율 지난 거래일 데이터 ---\n";
+            output += `최근 10거래일 종가: ${closes.slice(-10).map(price => price?.toFixed(2) || 'N/A').join(', ')}\n`;
+            output += `평균 종가: ${(closes.slice(-10).reduce((sum, price) => sum + (price || 0), 0) / 10).toFixed(2)}\n`;
+
+            let consecutiveStrengthDays = 0;
+            let signals = 0;
+
+            for (let i = 1; i < closes.length; i++) {
+                if (closes[i] < closes[i-1]) {
+                    consecutiveStrengthDays++;
+                    if (consecutiveStrengthDays >= 3) {
+                        output += `\n[분석 결과] 엔화가 미국 달러 대비 최소 3일 이상 강세를 지속했습니다. (연속 강세일: ${consecutiveStrengthDays}일)\n`;
+                        signals++;
+                        break;
+                    }
+                } else {
+                    consecutiveStrengthDays = 0;
+                }
+            }
+
+            return { signals, output };
+        }
+
+        // 10년 국채 분석
+        async function analyzeUS10Y() {
+            const data = await fetchYahooFinanceData("^TNX");
+            if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
+
+            const timestamps = data.timestamp;
+            const closes = data.indicators.quote[0].close;
+            
+            const currentRate = closes[closes.length - 1];
+            const previousRate = closes[closes.length - 2];
+            
+            let output = "\n--- 미국 10년물 국채 금리 추적 ---\n";
+            output += `전일 종가: ${previousRate?.toFixed(3)}%\n`;
+            output += `현재 종가: ${currentRate?.toFixed(3)}%\n`;
+
+            const change = currentRate - previousRate;
+            const changePercent = (change / previousRate) * 100;
+            
+            output += `변동: ${change.toFixed(3)}%p\n`;
+            output += `변동률: ${changePercent.toFixed(2)}%\n`;
+
+            let signals = 0;
+            if (Math.abs(changePercent) > 3) {
+                output += `\n[경고] 미국 10년물 국채 금리가 크게 변동했습니다!\n`;
+                output += `금리가 ${change.toFixed(3)}%p (${changePercent.toFixed(2)}%) ${change > 0 ? '상승' : '하락'}했습니다.\n`;
+                signals++;
+            }
+
+            return { signals, output };
+        }
+
+        // 글로벌 시장 분석
+        async function analyzeGlobalMarkets() {
+            const markets = [
+                { name: "Nasdaq", symbol: "^IXIC" },
+                { name: "Europe (EURO STOXX 50)", symbol: "^STOXX50E" },
+                { name: "China (Shanghai Composite)", symbol: "000001.SS" }
+            ];
+
+            let output = "\n--- 글로벌 증시 일일 변동 추적 ---\n";
+            let totalSignals = 0;
+
+            for (const market of markets) {
+                const data = await fetchYahooFinanceData(market.symbol, "2d");
+                if (!data) continue;
+
+                const closes = data.indicators.quote[0].close;
+                const currentClose = closes[closes.length - 1];
+                const previousClose = closes[closes.length - 2];
+
+                const change = currentClose - previousClose;
+                const changePercent = (change / previousClose) * 100;
+
+                output += `\n시장: ${market.name} (${market.symbol})\n`;
+                output += `  전일 종가: ${previousClose?.toFixed(2)}\n`;
+                output += `  현재 종가: ${currentClose?.toFixed(2)}\n`;
+                output += `  변동: ${change?.toFixed(2)}\n`;
+                output += `  변동률: ${changePercent?.toFixed(2)}%\n`;
+
+                if (change < 0) {
+                    output += `  [하락] ${market.name} 시장이 하락했습니다.\n`;
+                    totalSignals++;
+                } else if (change > 0) {
+                    output += `  [상승] ${market.name} 시장이 상승했습니다.\n`;
+                } else {
+                    output += `  [보합] ${market.name} 시장이 보합세를 보였습니다.\n`;
+                }
+            }
+
+            return { signals: totalSignals, output };
+        }
+
+        // 차트 생성 함수
+        function createChart(canvasId, data, title) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const labels = data.timestamps.map(timestamp => 
+                new Date(timestamp * 1000).toLocaleDateString()
+            );
+            
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: title,
+                        data: data.closes,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // 메인 실행 함수
+        async function runCheck() {
+            // UI 초기화
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('summary-title').style.display = 'none';
+            document.getElementById('summary').style.display = 'none';
+            document.getElementById('details-title').style.display = 'none';
+            document.getElementById('details').innerHTML = '';
+
+            try {
+                const results = await Promise.all([
+                    analyzeVIX(),
+                    analyzeNasdaq(),
+                    analyzeDXY(),
+                    analyzeJPY(),
+                    analyzeUS10Y(),
+                    analyzeGlobalMarkets()
+                ]);
+
+                const totalSignals = results.reduce((sum, result) => sum + result.signals, 0);
+
+                // 요약 섹션 표시
+                document.getElementById('summary-title').style.display = 'block';
+                const summaryDiv = document.getElementById('summary');
+                summaryDiv.textContent = `총 감지된 위험 신호 수: ${totalSignals}개`;
+                summaryDiv.style.display = 'block';
+
+                // 상세 결과 섹션 표시
+                document.getElementById('details-title').style.display = 'block';
+                const detailsDiv = document.getElementById('details');
+
+                const scriptNames = ['VIX 지수', '나스닥', '달러 인덱스', '엔화', '10년 국채', '글로벌 시장'];
+                
+                results.forEach((result, index) => {
+                    const scriptDetailDiv = document.createElement('div');
+                    scriptDetailDiv.className = 'script-detail-section';
+                    
+                    let chartHtml = '';
+                    if (result.chartData && (index === 0 || index === 1)) {
+                        const canvasId = `chart-${index}`;
+                        chartHtml = `<div class="chart-container"><canvas id="${canvasId}"></canvas></div>`;
+                    }
+                    
+                    scriptDetailDiv.innerHTML = `
+                        <h3>${scriptNames[index]}</h3>
+                        <p>감지된 신호 수: <span class="signal-count">${result.signals}개</span></p>
+                        ${chartHtml}
+                        <pre>${result.output}</pre>
+                    `;
+                    detailsDiv.appendChild(scriptDetailDiv);
+                });
+
+                // 차트 생성
+                setTimeout(() => {
+                    results.forEach((result, index) => {
+                        if (result.chartData && (index === 0 || index === 1)) {
+                            const canvasId = `chart-${index}`;
+                            const titles = ['VIX Index', 'Nasdaq Composite'];
+                            createChart(canvasId, result.chartData, titles[index]);
+                        }
+                    });
+                }, 100);
+
+            } catch (error) {
+                document.getElementById('details').innerHTML = 
+                    `<div class="error-message">오류 발생: ${error.message}</div>`;
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html> 
