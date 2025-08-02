@@ -36,7 +36,7 @@ async function runCheck() {
             scriptDetailDiv.className = 'script-detail-section';
             
             let chartHtml = '';
-            if (result.chartData && (index === 0 || index === 1 || index === 2 || index === 3)) { // Added index === 3 for JPY
+            if (result.chartData && (index === 0 || index === 1 || index === 2 || index === 3 || index === 4)) { // Added index === 4 for US10Y
                 const canvasId = `chart-${index}`;
                 chartHtml = ChartManager.generateChartHTML(canvasId);
             }
@@ -53,9 +53,9 @@ async function runCheck() {
         // 차트 생성
         setTimeout(() => {
             results.forEach((result, index) => {
-                if (result.chartData && (index === 0 || index === 1 || index === 2 || index === 3)) {
+                if (result.chartData && (index === 0 || index === 1 || index === 2 || index === 3 || index === 4)) {
                     const canvasId = `chart-${index}`;
-                    const titles = ['VIX Index', 'Nasdaq Composite', 'Dollar Index (DXY)', 'Japanese Yen']; // Added Japanese Yen
+                    const titles = ['VIX Index', 'Nasdaq Composite', 'Dollar Index (DXY)', 'Japanese Yen', 'US 10-Year Treasury Yield']; // Added US 10-Year Treasury Yield
                     ChartManager.createChart(canvasId, result.chartData, titles[index]);
                 }
             });

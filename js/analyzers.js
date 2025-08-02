@@ -233,7 +233,7 @@ async function analyzeJPY() {
 // 10년 국채 분석
 async function analyzeUS10Y() {
     try {
-        const data = await DataFetcher.fetchYahooFinanceData("^TNX");
+        const data = await DataFetcher.fetchYahooFinanceData("^TNX", "1mo");
         if (!data) return { signals: 0, output: "데이터를 가져올 수 없습니다." };
 
         // 데이터 구조 안전하게 처리
@@ -266,7 +266,7 @@ async function analyzeUS10Y() {
             }
         }
 
-        return { signals, output };
+        return { signals, output, chartData: { timestamps, closes } };
     } catch (error) {
         return { signals: 0, output: `US10Y 데이터 가져오기 실패: ${error.message}` };
     }

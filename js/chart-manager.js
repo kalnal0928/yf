@@ -32,6 +32,9 @@ function createChart(canvasId, data, title) {
     } else if (title.includes('Japanese Yen')) { // Added for Japanese Yen
         chartColor = 'rgb(153, 102, 255)';
         backgroundColor = 'rgba(153, 102, 255, 0.2)';
+    } else if (title.includes('US 10-Year Treasury Yield')) { // Added for US 10-Year Treasury Yield
+        chartColor = 'rgb(255, 205, 86)';
+        backgroundColor = 'rgba(255, 205, 86, 0.2)';
     }
     
     return new Chart(ctx, {
@@ -80,7 +83,8 @@ function createChart(canvasId, data, title) {
                         display: true,
                         text:                               title.includes('Nasdaq') ? '지수' :
                               title.includes('DXY') ? '달러 인덱스' :
-                              title.includes('Japanese Yen') ? '엔화' : '가격'
+                              title.includes('Japanese Yen') ? '엔화' :
+                              title.includes('US 10-Year Treasury Yield') ? '금리' : '가격'
                     },
                     beginAtZero: false
                 }
